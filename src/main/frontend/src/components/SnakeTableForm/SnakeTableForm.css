@@ -1,0 +1,43 @@
+table {
+  margin: 0px auto;
+  margin-top: 32px;
+}
+
+td {
+  background: #fff;
+  border: 1px solid rgb(165, 62, 62);
+  padding: 10px 15px;
+  color: green;
+  cursor: pointer;
+  width: 80px;
+  height: 80px;
+}
+
+.snake-head {
+  width: 110px;
+  position: absolute;
+  margin-top: 1px;
+  height: 100px;
+}
+
+/* Remove input arrows numbers range */
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+td:hover {
+  background: #eaeaea;
+}
+
+/**Remove empty cells of snake */
+.table-hide {
+  empty-cells: hide;
+}
