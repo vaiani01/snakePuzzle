@@ -2,10 +2,12 @@ package com.tahiti.snakePuzzle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.Console;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -34,7 +36,7 @@ class SnakePuzzleApplicationTests {
 		return doubleValue == 66;
 	}
 
-	private static void printArray(Integer[] input, List<String> combinations) {
+	private static void fillArray(Integer[] input, List<String> combinations) {
 		if (checkComputation(input)) {
 			if (combinations.size() < 128) {
 
@@ -54,21 +56,21 @@ class SnakePuzzleApplicationTests {
 		input[b] = tmp;
 	}
 
-	private static void printAllRecursive(
+	private static void swapAllRecursive(
 			int n, Integer[] elements, List<String> combinations) {
 
 		if (n == 1) {
-			printArray(elements, combinations);
+			fillArray(elements, combinations);
 		} else {
 			for (int i = 0; i < n - 1; i++) {
-				printAllRecursive(n - 1, elements, combinations);
+				swapAllRecursive(n - 1, elements, combinations);
 				if (n % 2 == 0) {
 					swap(elements, i, n - 1);
 				} else {
 					swap(elements, 0, n - 1);
 				}
-			}
-			printAllRecursive(n - 1, elements, combinations);
+			} 
+			swapAllRecursive(n - 1, elements, combinations);
 		}
 	}
 
@@ -79,9 +81,11 @@ class SnakePuzzleApplicationTests {
 
 		ArrayList<String> combinations = new ArrayList<>();
 
-		printAllRecursive(9, NUMBER_ARRAY, combinations);
+		swapAllRecursive(9, NUMBER_ARRAY, combinations);
 
 		assertEquals(128, combinations.size());
+		String soluce = combinations.get(new Random().nextInt(combinations.size()));
+		System.out.println("Ma solution random" + soluce);
 	}
 
 }
