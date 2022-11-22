@@ -1,11 +1,4 @@
-import {
-  Alert,
-  Box,
-  Button,
-  ButtonGroup,
-  Collapse,
-  Input,
-} from "@mui/material";
+import { Alert, Box, Button, ButtonGroup, Collapse } from "@mui/material";
 
 import LoadingButton from "@mui/lab/LoadingButton";
 
@@ -20,20 +13,27 @@ import {
   SNAKE_TABLE_ALLOWED_VALUES,
   SNAKE_TABLE_PREFIX_KEY,
   SUCCESS_COMPUTATION_MESSAGE,
+  SUCCESS_DELETE_MESSAGE,
 } from "../../constants/SnakeTableConstant";
-import { SnakeTableForm, SnakeTableValues } from "../../types/SnakeTableTypes";
+import {
+  Combination,
+  SnakeTableForm,
+  SnakeTableValues,
+} from "../../types/SnakeTableTypes";
 import computePuzzle from "../../utils/MathUtil";
-import SnakeTableFirstRow from "./SnakeTableFirstRow";
-import "./SnakeTableForm.css";
-import SnakeTableLastRow from "./SnakeTableLastRow";
-import SnakeTableMiddleRow from "./SnakeTableMiddleRow";
-import { useIsFetching } from "@tanstack/react-query";
+import { SUCCESS_DELETE_ALL_MESSAGE } from "./../../constants/SnakeTableConstant";
 import useApiDatas from "./../../hooks/useApiDatas";
+import SnakeTableContent from "./SnakeTableContent";
+import "./SnakeTableForm.css";
 
 const SnakeTable = () => {
   const [canCellBeModified, setCanCellBeModified] = useState<boolean>(false);
   const [isAlertMessageOpen, setIsAlertMessageOpen] = useState<boolean>(true);
   const [isSolutionFound, setIsSolutionFound] = useState<boolean>(false);
+  const [isCombinationDeleted, setIsCombinationDeleted] =
+    useState<boolean>(false);
+  const [areAllCombinationsDeleted, setAreAllCombinationsDeleted] =
+    useState<boolean>(false);
 
   const computeSolution = useCallback((values: SnakeTableForm): number => {
     return computePuzzle(values);
@@ -49,24 +49,36 @@ const SnakeTable = () => {
     formState: { errors },
   } = useForm();
 
-  const isFetchingCombination = useIsFetching({
-    queryKey: ["post-combinations"],
-  });
-  const isDeletingCombination = useIsFetching({
-    queryKey: ["delete-combination"],
-  });
-  const isDeletingAllCombinations = useIsFetching({
-    queryKey: ["delete-all-combinations"],
-  });
+  const [displayedCombination, setDisplayedCombination] = useState<
+    Combination | undefined
+  >(undefined);
 
   //API DATAS
-  const { getPuzzleCombinations } = useApiDatas();
+  const {
+    postPuzzleCombination,
+    deletePuzzleCombination,
+    deleteAllPuzzleCombinations,
+    updatePuzzleCombinations,
+  } = useApiDatas(displayedCombination);
+
   const {
     data: combination,
-    refetch: fetchCombination,
-    remove: removeCombination,
-  } = getPuzzleCombinations;
-  console.log(" MES DONNEES", combination);
+    isLoading: isLoadingCombination,
+    mutate: postCombination,
+  } = postPuzzleCombination;
+
+  const { mutateAsync: updateCombination } = updatePuzzleCombinations;
+
+  const {
+    refetch: deleteCombination,
+    data: isDeleted,
+    remove: removeIsDeleted,
+  } = deletePuzzleCombination;
+  const {
+    refetch: deleteAllCombinations,
+    data: areDeleted,
+    remove: removeAreDeleted,
+  } = deleteAllPuzzleCombinations;
 
   const isCombinationValid = (values: SnakeTableValues[]) => {
     const isValid = SNAKE_TABLE_ALLOWED_VALUES.every(
@@ -81,10 +93,25 @@ const SnakeTable = () => {
 
   /** Update form with combination fetched by API */
   useEffect(() => {
-    combination?.split(",").forEach((num, index) => {
+    combination?.combination.split(",").forEach((num, index) => {
       setValue(`${SNAKE_TABLE_PREFIX_KEY}${index + 1}`, num);
     });
-  }, [combination, setValue, fetchCombination]);
+    setDisplayedCombination(combination);
+  }, [combination, setValue]);
+
+  // Delete confirmation
+  useEffect(() => {
+    if (isDeleted) {
+      setIsCombinationDeleted(true);
+    }
+  }, [isDeleted]);
+
+  // Delete All confirmation
+  useEffect(() => {
+    if (areDeleted) {
+      setAreAllCombinationsDeleted(true);
+    }
+  }, [areDeleted]);
 
   /** Event Handlers */
 
@@ -96,20 +123,25 @@ const SnakeTable = () => {
     setCanCellBeModified(false);
     // reset form
     reset();
-    // remove react-query cache
-    removeCombination();
+    setDisplayedCombination(undefined);
   };
 
   const handleDeleteCombination = () => {
-    // reset form
-    reset();
-    // remove react-query cache
-    removeCombination();
-    /// CALL DELETE API
+    if (displayedCombination?.id) {
+      // reset form
+      reset();
+      setDisplayedCombination(undefined);
+      /// CALL DELETE API
+      deleteCombination();
+    }
   };
 
   const handleDeleteAllCombinations = () => {
-    /// CALL DELETE API
+    // reset form
+    reset();
+    setDisplayedCombination(undefined);
+    /// CALL DELETE ALL API
+    deleteAllCombinations();
   };
 
   const onSubmit = (data: FieldValues) => {
@@ -129,11 +161,20 @@ const SnakeTable = () => {
           message: INVALID_COMPUTATION_MESSAGE,
         } as ErrorOption);
       } else {
-        // TODO CALL API
+        // sorting value by key and generate combination to send in DB
+        const sortedValue = Object.keys(data)
+          .sort()
+          .reduce((accu: string, key: string, index: number) => {
+            accu = accu.concat(data[key]).concat(",");
+            return accu;
+          }, "")
+          ?.slice(0, -1);
+        // CALLING API
+        updateCombination(sortedValue);
         setIsSolutionFound(true);
       }
     } else {
-      fetchCombination();
+      postCombination();
     }
   };
 
@@ -147,12 +188,15 @@ const SnakeTable = () => {
         >
           <Button
             onClick={handleDeleteCombination}
+            disabled={!displayedCombination?.id}
             startIcon={<DeleteIcon />}
             color="error"
           >
             Supprimer
           </Button>
-          <Button color="error">Tout supprimer</Button>
+          <Button color="error" onClick={handleDeleteAllCombinations}>
+            Tout supprimer
+          </Button>
         </ButtonGroup>
         <ButtonGroup
           // orientation="vertical"
@@ -167,7 +211,7 @@ const SnakeTable = () => {
           <Button onClick={handleEditForm}>Modifier</Button>
           <LoadingButton
             sx={{ backgroundColor: "primary.main", color: "white" }}
-            loading={isFetchingCombination > 0}
+            loading={isLoadingCombination}
             type="submit"
             endIcon={<SendIcon />}
           >
@@ -206,7 +250,9 @@ const SnakeTable = () => {
             </Collapse>
           </Box>
         )}
-      {isSolutionFound && (
+      {(isSolutionFound ||
+        isCombinationDeleted ||
+        areAllCombinationsDeleted) && (
         <Box
           sx={{
             marginTop: "32px",
@@ -214,113 +260,65 @@ const SnakeTable = () => {
           display="flex"
           justifyContent="center"
         >
-          <Collapse in={isSolutionFound}>
-            <Alert
-              severity="success"
-              action={
-                <Button color="inherit" size="small">
-                  X
-                </Button>
-              }
-              onClick={() => {
-                setIsSolutionFound(false);
-              }}
-            >
-              {SUCCESS_COMPUTATION_MESSAGE}
-            </Alert>
-          </Collapse>
+          {isSolutionFound && (
+            <Collapse in={isSolutionFound}>
+              <Alert
+                severity="success"
+                action={
+                  <Button color="inherit" size="small">
+                    X
+                  </Button>
+                }
+                onClick={() => {
+                  setIsSolutionFound(false);
+                }}
+              >
+                {SUCCESS_COMPUTATION_MESSAGE}
+              </Alert>
+            </Collapse>
+          )}
+          {isCombinationDeleted && (
+            <Collapse in={isCombinationDeleted}>
+              <Alert
+                severity="success"
+                action={
+                  <Button color="inherit" size="small">
+                    X
+                  </Button>
+                }
+                onClick={() => {
+                  setIsCombinationDeleted(false);
+                  removeIsDeleted();
+                }}
+              >
+                {SUCCESS_DELETE_MESSAGE}
+              </Alert>
+            </Collapse>
+          )}
+          {areAllCombinationsDeleted && (
+            <Collapse in={areAllCombinationsDeleted}>
+              <Alert
+                severity="success"
+                action={
+                  <Button color="inherit" size="small">
+                    X
+                  </Button>
+                }
+                onClick={() => {
+                  setAreAllCombinationsDeleted(false);
+                  removeAreDeleted();
+                }}
+              >
+                {SUCCESS_DELETE_ALL_MESSAGE}
+              </Alert>
+            </Collapse>
+          )}
         </Box>
       )}
-      <table className="table-hide">
-        <tbody>
-          <SnakeTableFirstRow
-            canCellBeModified={canCellBeModified}
-            placeholder={"?"}
-            register={register}
-          />
-          <SnakeTableMiddleRow
-            firstValue="+"
-            secondValue="X"
-            thirdValue="-"
-            fourthValue="="
-          />
-          <SnakeTableMiddleRow
-            firstValue="13"
-            secondValue="12"
-            thirdValue="11"
-            fourthValue="10"
-          />
-          <SnakeTableMiddleRow
-            firstValue="X"
-            secondValue="+"
-            thirdValue="+"
-            fourthValue="-"
-          />
-          <SnakeTableMiddleRow
-            firstValue={
-              <Input
-                disabled={!canCellBeModified}
-                placeholder={"?"}
-                type={"number"}
-                inputProps={{
-                  style: { textAlign: "center" },
-                  min: "1",
-                  max: "9",
-                  required: true,
-                }}
-                {...register("number-2")}
-              />
-            }
-            secondValue={
-              <Input
-                disabled={!canCellBeModified}
-                placeholder={"?"}
-                type={"number"}
-                inputProps={{
-                  style: { textAlign: "center" },
-                  min: "1",
-                  max: "9",
-                  required: true,
-                }}
-                {...register("number-4")}
-              />
-            }
-            thirdValue={
-              <Input
-                disabled={!canCellBeModified}
-                placeholder={"?"}
-                type={"number"}
-                inputProps={{
-                  style: { textAlign: "center" },
-                  min: "1",
-                  max: "9",
-                  required: true,
-                }}
-                {...register("number-7")}
-              />
-            }
-            fourthValue={
-              <Input
-                disabled={!canCellBeModified}
-                placeholder={"?"}
-                type={"number"}
-                inputProps={{
-                  style: { textAlign: "center" },
-                  min: "1",
-                  max: "9",
-                  required: true,
-                }}
-                {...register("number-9")}
-              />
-            }
-          />
-          <SnakeTableLastRow
-            canCellBeModified={canCellBeModified}
-            placeholder={"?"}
-            register={register}
-          />
-        </tbody>
-      </table>
+      <SnakeTableContent
+        canCellBeModified={canCellBeModified}
+        register={register}
+      />
     </form>
   );
 };

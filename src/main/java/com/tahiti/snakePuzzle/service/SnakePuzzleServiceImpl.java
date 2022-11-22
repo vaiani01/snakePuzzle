@@ -8,54 +8,120 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import com.tahiti.snakePuzzle.dto.CombinationDto;
+import com.tahiti.snakePuzzle.entity.Combination;
+import com.tahiti.snakePuzzle.exception.CombinationNotFoundException;
+
+import com.tahiti.snakePuzzle.repository.SnakePuzzleRepository;
 
 @Service
 public class SnakePuzzleServiceImpl {
 
-    Integer[] NUMBER_ARRAY = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    private Integer[] NUMBER_ARRAY = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    private static Logger LOGGER = LoggerFactory.getLogger(SnakePuzzleServiceImpl.class);
+
+    final private SnakePuzzleRepository repository;
+
+    public SnakePuzzleServiceImpl(SnakePuzzleRepository repository) {
+        this.repository = repository;
+    }
 
     /**
-     * Generate all combinaison and return one
+     * Generate all combination and return one
      * 
-     * @param combinaison combinaison given by frontend if exist
+     * @param combination combination still displayed by frontend if exist
+     * @throws Exception
      */
-    public String postCombinations(final Optional<String> combinaison) {
+    public CombinationDto postCombinations(final Optional<String> combination) throws Exception {
 
-        ArrayList<String> combinations = new ArrayList<>();
+        try {
+            ArrayList<CombinationDto> combinations = new ArrayList<>();
 
-        swapAllRecursive(9, NUMBER_ARRAY, combinations);
+            // GET combinations from Database if exists
+            List<Combination> dbCombinations = repository.findAll();
 
-        if (combinaison.isPresent()) {
-            List<String> filteredList = combinations.stream().filter((item -> !item.equals(combinaison.get())))
+            if (dbCombinations.size() > 0) {
+                // MAP to DTO
+                combinations.addAll(dbCombinations.stream()
+                        .map(dbCombi -> new CombinationDto(dbCombi.getId(), dbCombi.getNumbers())).toList());
+                // returns random combination
+                return selectRandomCombination(combination, combinations);
+            } else {
+
+                List<String> computedCombinations = new ArrayList<>();
+                // if no combination found in Database - load computation
+                swapAllRecursive(9, NUMBER_ARRAY, computedCombinations);
+
+                // Map combinations to combination entity list
+                final List<Combination> mappedCombinations = computedCombinations.stream()
+                        .map(numbers -> new Combination(numbers)).toList();
+
+                // SAVE ALL combinations in Database
+                dbCombinations.addAll(repository.saveAll(mappedCombinations));
+
+                // Map to DTO
+                combinations.addAll(dbCombinations.stream()
+                        .map(dbCombi -> new CombinationDto(dbCombi.getId(), dbCombi.getNumbers())).toList());
+
+                // return random combination
+                return selectRandomCombination(combination, combinations);
+            }
+        } catch (
+
+        Exception e) {
+            // throw CombinaisonNotFoundException exception if combination has not been
+            // fetched
+            throw new CombinationNotFoundException();
+        }
+
+    }
+
+    private CombinationDto selectRandomCombination(final Optional<String> combination,
+            List<CombinationDto> combinations) {
+
+        if (combination.isPresent()) {
+            List<CombinationDto> filteredList = combinations.stream()
+                    .filter((item -> !item.getCombination().equals(combination.get())))
                     .toList();
+
             return combinations.get(new Random().nextInt(filteredList.size()));
 
         } else {
             return combinations.get(new Random().nextInt(combinations.size()));
         }
+    }
+
+    /**
+     * Updata Db with combination given in parameter
+     * 
+     * @param combination combination given by frontend
+     */
+    public void updateCombinations(final String combination) {
+        try {
+            repository.save(new Combination(combination));
+        } catch (Exception e) {
+            LOGGER.warn("Update can not be done");
+        }
 
     }
 
     /**
-     * Updata Db with combinaison given in parameter
+     * Delete combination with co
      * 
-     * @param combinaison combinaison given by frontend
+     * @param combination combination given by frontend
      */
-    public void updateCombinations(final String combinaison) {
+    public void deleteCombination(Long id) {
 
-    }
-
-    /**
-     * Delete combinaison with co
-     * 
-     * @param combinaison combinaison given by frontend
-     */
-    public void deleteCombination(final String combinaison) {
+        repository.deleteById(id);
 
     }
 
     public void deleteAllCombinations() {
+        repository.deleteAll();
 
     }
 

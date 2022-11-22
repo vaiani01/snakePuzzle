@@ -13,13 +13,6 @@ td {
   height: 80px;
 }
 
-.snake-head {
-  width: 110px;
-  position: absolute;
-  margin-top: 1px;
-  height: 100px;
-}
-
 /* Remove input arrows numbers range */
 /* Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,

@@ -25,3 +25,8 @@ export type SnakeTableKeys =
 export type SnakeTableForm = {
   [key in SnakeTableKeys]: SnakeTableValues;
 };
+
+export interface Combination {
+  id: number;
+  combination: string;
+}

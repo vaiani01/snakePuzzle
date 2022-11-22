@@ -69,7 +69,7 @@ class SnakePuzzleApplicationTests {
 				} else {
 					swap(elements, 0, n - 1);
 				}
-			} 
+			}
 			swapAllRecursive(n - 1, elements, combinations);
 		}
 	}

@@ -20,3 +20,9 @@ export const INVALID_COMPUTATION_MESSAGE =
 
 export const SUCCESS_COMPUTATION_MESSAGE =
   "Félicitations : votre solution est validée et sauvegardée en BDD!";
+
+export const SUCCESS_DELETE_MESSAGE =
+  "Votre solution vient d'être supprimée de la BDD!";
+
+export const SUCCESS_DELETE_ALL_MESSAGE =
+  "Toutes vos solutions viennent d'être supprimée de la BDD!";
