@@ -3,17 +3,14 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import apiClient from "../http-common";
 import { Combination } from "../types/SnakeTableTypes";
 
-const fetchPuzzleCombinations = (
+const postPuzzleCombinations = (
   displayedCombination?: string
-): Promise<Combination> => {
+): Promise<any> => {
   const url = displayedCombination
     ? `/snake-puzzle/combinations/${displayedCombination}`
     : "/snake-puzzle/combinations";
 
-  return apiClient.post(url).then((res) => {
-    console.log(res);
-    return res.data;
-  });
+  return apiClient.post(url).then((res) => res.data);
 };
 
 const deletePuzzleCombinationsById = (
@@ -39,10 +36,7 @@ const putPuzzleCombinations = (
 };
 
 const useApiDatas = (displayedCombination?: Combination) => {
-  const postPuzzleCombination = useMutation<Combination>({
-    mutationFn: () =>
-      fetchPuzzleCombinations(displayedCombination?.combination),
-  });
+  const postPuzzleCombination = useMutation(postPuzzleCombinations);
 
   const deletePuzzleCombination = useQuery<boolean>({
     queryKey: ["delete-combination"],

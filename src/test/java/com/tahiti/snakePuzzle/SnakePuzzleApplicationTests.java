@@ -2,7 +2,6 @@ package com.tahiti.snakePuzzle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.Console;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;

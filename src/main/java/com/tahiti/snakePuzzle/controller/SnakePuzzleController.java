@@ -24,25 +24,25 @@ public class SnakePuzzleController {
         this.service = service;
     }
 
-    @PostMapping(value = { "/combinations", "/combinations/{combination}" })
-    ResponseEntity<CombinationDto> loadCombination(@PathVariable(required = false) Optional<String> combination)
+    @PostMapping(value = { "/api/snake-puzzle/combinations", "/api/snake-puzzle/combinations/{combination}" })
+    public ResponseEntity<CombinationDto> loadCombination(@PathVariable(required = false) Optional<String> combination)
             throws Exception {
         CombinationDto result = service.postCombinations(combination);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
-    @DeleteMapping("/combinations/{id}")
-    void deleteCombination(@PathVariable Long id) {
+    @DeleteMapping("/api/snake-puzzle/combinations/{id}")
+    public void deleteCombination(@PathVariable Long id) {
         service.deleteCombination(id);
     }
 
-    @DeleteMapping("/combinations")
-    void deleteAllCombinations() {
+    @DeleteMapping("/api/snake-puzzle/combinations")
+    public void deleteAllCombinations() {
         service.deleteAllCombinations();
     }
 
-    @PutMapping("/combinations/{combination}")
-    void updateCombinations(@PathVariable(required = true) String combination) {
+    @PutMapping("/api/snake-puzzle/combinations/{combination}")
+    public void updateCombinations(@PathVariable(required = true) String combination) {
         service.updateCombinations(combination);
     }
 }

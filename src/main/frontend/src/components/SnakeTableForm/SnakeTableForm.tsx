@@ -1,4 +1,12 @@
-import { Alert, Box, Button, ButtonGroup, Collapse } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  ButtonGroup,
+  Collapse,
+  duration,
+  Snackbar,
+} from "@mui/material";
 
 import LoadingButton from "@mui/lab/LoadingButton";
 
@@ -27,6 +35,8 @@ import SnakeTableContent from "./SnakeTableContent";
 import "./SnakeTableForm.css";
 
 const SnakeTable = () => {
+  const [hasWsTime, setHasWsTime] = useState<boolean>(false);
+  const [wsTimeMessage, setWsTimeMessage] = useState<string>("");
   const [canCellBeModified, setCanCellBeModified] = useState<boolean>(false);
   const [isAlertMessageOpen, setIsAlertMessageOpen] = useState<boolean>(true);
   const [isSolutionFound, setIsSolutionFound] = useState<boolean>(false);
@@ -61,13 +71,10 @@ const SnakeTable = () => {
     updatePuzzleCombinations,
   } = useApiDatas(displayedCombination);
 
-  const {
-    data: combination,
-    isLoading: isLoadingCombination,
-    mutate: postCombination,
-  } = postPuzzleCombination;
-
-  const { mutateAsync: updateCombination } = updatePuzzleCombinations;
+  const { mutateAsync: postCombination, isLoading: isLoadingCombination } =
+    postPuzzleCombination;
+  const { mutateAsync: updateCombination, isLoading: isUpdatingCombination } =
+    updatePuzzleCombinations;
 
   const {
     refetch: deleteCombination,
@@ -90,14 +97,6 @@ const SnakeTable = () => {
   const isComputationValid = (values: SnakeTableForm): boolean => {
     return computeSolution(values) === 66;
   };
-
-  /** Update form with combination fetched by API */
-  useEffect(() => {
-    combination?.combination.split(",").forEach((num, index) => {
-      setValue(`${SNAKE_TABLE_PREFIX_KEY}${index + 1}`, num);
-    });
-    setDisplayedCombination(combination);
-  }, [combination, setValue]);
 
   // Delete confirmation
   useEffect(() => {
@@ -144,6 +143,17 @@ const SnakeTable = () => {
     deleteAllCombinations();
   };
 
+  const handleSnackbarClose = (
+    event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setHasWsTime(false);
+  };
+
   const onSubmit = (data: FieldValues) => {
     const castedDatas = data as SnakeTableForm;
     const castedValues = Object.values(castedDatas);
@@ -174,7 +184,27 @@ const SnakeTable = () => {
         setIsSolutionFound(true);
       }
     } else {
-      postCombination();
+      const sd = Date.now();
+
+      postCombination(displayedCombination?.combination)
+        .then((data) => {
+          const ed = Date.now();
+
+          const duration = Math.abs(ed - sd);
+          console.log("Temps de réponse en ms : ", duration);
+          const splittedCombination = data?.combination
+            .toString()
+            .split(",")
+            .forEach((num: string, index: number) => {
+              setValue(`${SNAKE_TABLE_PREFIX_KEY}${index + 1}`, num);
+            });
+          setDisplayedCombination(splittedCombination);
+          return duration;
+        })
+        .then((dur) => {
+          setHasWsTime(true);
+          setWsTimeMessage(`Temps de réponse du Ws : ${dur.toString()} ms`);
+        });
     }
   };
 
@@ -211,7 +241,7 @@ const SnakeTable = () => {
           <Button onClick={handleEditForm}>Modifier</Button>
           <LoadingButton
             sx={{ backgroundColor: "primary.main", color: "white" }}
-            loading={isLoadingCombination}
+            loading={isLoadingCombination || isUpdatingCombination}
             type="submit"
             endIcon={<SendIcon />}
           >
@@ -319,6 +349,20 @@ const SnakeTable = () => {
         canCellBeModified={canCellBeModified}
         register={register}
       />
+      <Snackbar
+        open={hasWsTime}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {wsTimeMessage}
+        </Alert>
+      </Snackbar>
     </form>
   );
 };
